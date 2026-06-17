@@ -73,7 +73,7 @@ void accept_clients(int listener) {
             vector<string> lines = getlinesfromChannel(fptr);
             
             for (auto line : lines) {
-                cout << "read: " << line << "\n";
+                cout << "read: " << line << endl;
             }
 
             fclose(fptr); 
