@@ -1,71 +1,97 @@
 #include "request.hpp"
 
-RequestLine* parseRequestLine(string b, int *err) {
-    RequestLine* rl= new RequestLine();
 
+int parseRequestLine(const string& buf, RequestLine* rl, int *err) {
     vector<string> parts;
     string part = "";
+    
+    int consumed = 0;
+    bool found = false;
 
-    for (char c : b) {
+    for (int i = 0; i < buf.size(); i++) {
+        char c = buf[i];
+        if (c == '\r' && i + 1 < buf.size() && buf[i+1] == '\n') {
+            found = true;
+            consumed = i + 2; 
+            break; 
+        }
         if (c == ' ') {
             if (!part.empty()) {
                 parts.push_back(part);
                 part = "";
             }
         } 
-        else if (c != '\r' && c != '\n') {
+        else {
             part += c;
         }
     }    
+
+    if (!found) {
+        *err = 0;
+        return 0; 
+    }
     if (!part.empty()) {
         parts.push_back(part);
     }
     if (parts.size() != 3) {
         *err = INC_START_LINE;
-        delete rl; 
-        return nullptr;
+        return -1;
     }
 
-
-    for(char c:parts[0]){
-        if(!(c>='A' && c<='Z')){
+    for (char c : parts[0]) {
+        if (!(c >= 'A' && c <= 'Z')) {
             *err = BAD_START_LINE;
-            delete rl;
-            return nullptr;
+            return -1;
         }
     }
-    
 
-    if(parts[2]!="HTTP/1.1"){
+    if (parts[2] != "HTTP/1.1") {
         *err = UNSUPPORTED_HTTP_VERSION;
-        delete rl;
-        return nullptr;
+        return -1;
     }
-
     rl->Method = parts[0];
     rl->RequestTarget = parts[1];
     rl->HttpVersion = parts[2];
 
-    return rl;
-
+    return consumed;
 }
 
-Request* RequestFromReader(FILE* reader, int* err) {
-    char buffer[4096];     
-    if (fgets(buffer, sizeof(buffer), reader) == NULL) {
-        *err = BAD_START_LINE; 
-        return nullptr;
+int parse(Request* req, const string& unparsed_data, int* err) {
+    if (req->state == INIT) {
+        int consumed = parseRequestLine(unparsed_data, &(req->requestLine), err);
+        if (consumed > 0 && *err == 0) {
+            req->state = DONE;
+        }
+        return consumed;
     }
-    
-    string requestLineStr(buffer);
-    RequestLine* rl = parseRequestLine(requestLineStr, err);
-    if (rl == nullptr || *err != 0) {
-        return nullptr; 
-    }
-    
+    return 0; 
+}
+
+Request* RequestFromReader(FILE* reader, int* err, int chunks) {
     Request* req = new Request();
-    req->requestLine = *rl;
-    delete rl; 
+    string unparsed_buf = "";
     
+    vector<char> read_buf(chunks); 
+    while (req->state != DONE) {
+        int cnt = fread(&read_buf[0], 1, chunks, reader);
+        if (cnt == 0) {
+            if (req->state != DONE) {
+                *err = 1; 
+                delete req;
+                return nullptr;
+            }
+            break; 
+        }
+        unparsed_buf.append(&read_buf[0], cnt);
+        int consumed = parse(req, unparsed_buf, err);
+        if (*err != 0 || consumed < 0) {
+            delete req;
+            return nullptr;
+        }
+        if (consumed > 0) {
+            unparsed_buf.erase(0, consumed);
+        }
+    }
+
     return req; 
 }

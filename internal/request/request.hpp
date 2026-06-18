@@ -1,28 +1,35 @@
 #ifndef REQUEST_HPP
 #define REQUEST_HPP
+
 #include <vector>
-#include <iostream>
 #include <string>
+#include <cstdio> 
+#include <iostream>
 
 using namespace std;
 
 #define BAD_START_LINE 1
-#define SEPARATOR "\r\n"
 #define INC_START_LINE 2
 #define UNSUPPORTED_HTTP_VERSION 3
 
-typedef struct {
+struct RequestLine {
     string HttpVersion;
     string RequestTarget;
     string Method;
-} RequestLine;  
+};  
 
-typedef struct{
+enum ParseState {
+    INIT,
+    DONE
+};
+
+struct Request {
     RequestLine requestLine;
-} Request;
+    ParseState state = INIT;
+};
 
-RequestLine* parseRequestLine(string b,int *err);
-
-Request* RequestFromReader(FILE* reader,int* err);
+int parseRequestLine(const string& buf, RequestLine* rl, int* err);
+int parse(Request* req, const string& unparsed_data, int* err);
+Request* RequestFromReader(FILE* reader, int* err, int chunks = 8);
 
 #endif
