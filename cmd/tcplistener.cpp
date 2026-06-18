@@ -67,11 +67,18 @@ void accept_clients(int listener) {
             fclose(fptr); 
             continue;     
         }
-    
+        cout<<"Requestline:"<<endl;
         cout << "Method: " << req->requestLine.Method << endl;
         cout << "Target: " << req->requestLine.RequestTarget << endl;
-        cout << "Version: " << req->requestLine.HttpVersion << endl;
-        
+        cout << "HTTP Version: " << req->requestLine.HttpVersion << endl;   
+        cout<<"--------------------"<<endl;
+        cout<<"Headers:"<<endl;
+        for (auto& header : req->headers) {
+            for (int i = 0; i < header.second.size(); i++) {
+                cout << header.first << ": "  << header.second[i] << endl;
+            } 
+        }
+        cout<<"--------------------"<<endl;
         delete req;
         fclose(fptr); 
     }

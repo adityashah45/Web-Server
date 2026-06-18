@@ -1,71 +1,55 @@
 #include "request.hpp"
 
 
-int parseRequestLine(const string& buf, RequestLine* rl, int *err) {
-    vector<string> parts;
-    string part = "";
-    
-    int consumed = 0;
-    bool found = false;
+int parseSingle(Request* req, const string& unparsed_buf, int* err) {
+    if (unparsed_buf.empty()) {
+        return 0;
+    }
 
-    for (int i = 0; i < buf.size(); i++) {
-        char c = buf[i];
-        if (c == '\r' && i + 1 < buf.size() && buf[i+1] == '\n') {
-            found = true;
-            consumed = i + 2; 
+    switch (req->state) {
+        case INIT: {
+            int consumed = parseRequestLine(unparsed_buf, &(req->requestLine), err);   
+            if (consumed > 0 && *err == 0) {
+                req->state = PARSING_HEADERS; 
+            }
+            return consumed;
+        } 
+        case PARSING_HEADERS: {
+            bool done = false;
+            int consumed = parseHeader(req->headers, unparsed_buf, &done, err);
+            if (*err != 0) {
+                return 0; 
+            }
+            if (done) {
+                req->state = DONE; 
+            }
+            return consumed; 
+        }
+        case DONE:
+            return 0;
+
+        default:
+            return 0; 
+    }
+}
+
+
+int parse(Request* req, const string& unparsed_buf, int* err) {
+    int total_consumed = 0;
+    while (req->state != DONE) {
+        string current_data = unparsed_buf.substr(total_consumed);
+        int consumed = parseSingle(req, current_data, err);
+        if (*err != 0) {
+            return -1; 
+        }
+        if (consumed == 0) {
             break; 
         }
-        if (c == ' ') {
-            if (!part.empty()) {
-                parts.push_back(part);
-                part = "";
-            }
-        } 
-        else {
-            part += c;
-        }
-    }    
-
-    if (!found) {
-        *err = 0;
-        return 0; 
+        total_consumed += consumed;
     }
-    if (!part.empty()) {
-        parts.push_back(part);
-    }
-    if (parts.size() != 3) {
-        *err = INC_START_LINE;
-        return -1;
-    }
-
-    for (char c : parts[0]) {
-        if (!(c >= 'A' && c <= 'Z')) {
-            *err = BAD_START_LINE;
-            return -1;
-        }
-    }
-
-    if (parts[2] != "HTTP/1.1") {
-        *err = UNSUPPORTED_HTTP_VERSION;
-        return -1;
-    }
-    rl->Method = parts[0];
-    rl->RequestTarget = parts[1];
-    rl->HttpVersion = parts[2].substr(5); 
-
-    return consumed;
+    return total_consumed;
 }
 
-int parse(Request* req, const string& unparsed_data, int* err) {
-    if (req->state == INIT) {
-        int consumed = parseRequestLine(unparsed_data, &(req->requestLine), err);
-        if (consumed > 0 && *err == 0) {
-            req->state = DONE;
-        }
-        return consumed;
-    }
-    return 0; 
-}
 Request* RequestFromReader(FILE* reader, int* err, int chunks) {
     Request* req = new Request();
     string unparsed_buf= "";
