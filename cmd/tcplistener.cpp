@@ -79,6 +79,9 @@ void accept_clients(int listener) {
             } 
         }
         cout<<"--------------------"<<endl;
+        cout<<"Body:"<<endl;
+        cout << req->body << endl;
+        cout<<"--------------------"<<endl;
         delete req;
         fclose(fptr); 
     }

@@ -21,9 +21,30 @@ int parseSingle(Request* req, const string& unparsed_buf, int* err) {
                 return 0; 
             }
             if (done) {
-                req->state = DONE; 
+                req->state = PARSING_BODY; 
             }
             return consumed; 
+        }
+        case PARSING_BODY: {
+            string cl_str = getHeader(req->headers, "Content-Length");
+            if (cl_str.empty()) {
+                req->state = DONE;
+                return 0; 
+            }
+            int expected_len=stoi(cl_str);
+            req->body += unparsed_buf;
+            int consumed = unparsed_buf.size();
+
+            if (req->body.size() > expected_len) {
+                *err = BODY_LEN_EXCEEDED; 
+                return 0;
+            }
+
+            if (req->body.size() == expected_len) {
+                req->state = DONE;
+            }
+
+            return consumed;
         }
         case DONE:
             return 0;

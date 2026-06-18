@@ -9,10 +9,12 @@
 
 using namespace std;
 
-#define BAD_START_LINE 1
-#define INC_START_LINE 2
-#define UNSUPPORTED_HTTP_VERSION 3
-
+enum Errors{
+    BAD_START_LINE,
+    INC_START_LINE,
+    UNSUPPORTED_HTTP_VERSION ,
+    BODY_LEN_EXCEEDED
+};
 struct RequestLine {
     string HttpVersion;
     string RequestTarget;
@@ -22,12 +24,14 @@ struct RequestLine {
 enum ParseState {
     INIT,
     PARSING_HEADERS,
+    PARSING_BODY,
     DONE
 };
 
 struct Request {
     RequestLine requestLine;
     Headers headers;         
+    string body;
     ParseState state = INIT;
 };
 

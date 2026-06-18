@@ -2,7 +2,6 @@
 
 string trimOWS(const string& s) {
     int start = 0;
-
     while (start < s.size() && (s[start] == ' ' || s[start] == '\t')) {
         start++;
     }
@@ -28,6 +27,22 @@ bool validChar(char c) {
         default:
             return false;
     }
+}
+
+string getHeader(const Headers& headers,const string& key) {
+    
+    string lower_key = "";
+    for (char c : key) {
+        if (c >= 'A' && c <= 'Z') {
+            lower_key += (c - 'A' + 'a');
+        } else {
+            lower_key += c;
+        }
+    }
+    if(headers.find(lower_key) != headers.end()) {
+        return headers.at(lower_key).front();
+    }
+    return "";
 }
 
 int parseHeader(Headers& headers, const string& buf, bool* done, int* err) {
