@@ -51,7 +51,7 @@ int parseRequestLine(const string& buf, RequestLine* rl, int *err) {
     }
     rl->Method = parts[0];
     rl->RequestTarget = parts[1];
-    rl->HttpVersion = parts[2];
+    rl->HttpVersion = parts[2].substr(5); 
 
     return consumed;
 }
@@ -66,24 +66,22 @@ int parse(Request* req, const string& unparsed_data, int* err) {
     }
     return 0; 
 }
-
 Request* RequestFromReader(FILE* reader, int* err, int chunks) {
     Request* req = new Request();
-    string unparsed_buf = "";
-    
+    string unparsed_buf= "";
     vector<char> read_buf(chunks); 
+
     while (req->state != DONE) {
-        int cnt = fread(&read_buf[0], 1, chunks, reader);
-        if (cnt == 0) {
-            if (req->state != DONE) {
-                *err = 1; 
-                delete req;
-                return nullptr;
-            }
-            break; 
+        int bytes_read = fread(&read_buf[0], 1, chunks, reader);
+        if (bytes_read == 0) {
+            *err = 1;
+            delete req;
+            return nullptr;
         }
-        unparsed_buf.append(&read_buf[0], cnt);
+
+        unparsed_buf.append(&read_buf[0], bytes_read);
         int consumed = parse(req, unparsed_buf, err);
+
         if (*err != 0 || consumed < 0) {
             delete req;
             return nullptr;
