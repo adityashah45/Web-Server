@@ -13,7 +13,7 @@
 using namespace std;
 
 
-int create_socket(int* listener){
+int createSocket(int* listener){
     
     if ((*(listener) = socket(AF_INET, SOCK_STREAM, 0)) == -1) {
         cerr << "Error: Failed to create socket\n";
@@ -32,7 +32,7 @@ int create_socket(int* listener){
     }
     return 0;
 }
-void accept_clients(int listener) {
+void acceptClients(int listener) {
 
     while (true) {
         sockaddr_in client_addr{};
@@ -89,13 +89,13 @@ void accept_clients(int listener) {
 
 int main(){
     int listener;
-    create_socket(&listener);
+    createSocket(&listener);
     if (listen(listener, 10) < 0) {
         cerr << "Error: Failed to listen on socket\n";
         close(listener);
         exit(1);
     }
     cout << "Server is listening on port 8080..." << endl;
-    accept_clients(listener);
+    acceptClients(listener);
     return 0;
 }

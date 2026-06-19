@@ -86,7 +86,7 @@ Request* RequestFromReader(FILE* reader, int* err, int chunks) {
 
         unparsed_buf.append(&read_buf[0], bytes_read);
         int consumed = parse(req, unparsed_buf, err);
-
+    
         if (*err != 0 || consumed < 0) {
             delete req;
             return nullptr;
