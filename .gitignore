@@ -1,0 +1,9 @@
+# C++ Build Files
+build/
+*.so
+*.dylib
+
+# IDEs
+.vscode/
+.idea/
+assets/

@@ -1,18 +1,34 @@
 #include "server.hpp"
 
-
 using namespace std;
 
-void handleConnection(Server* s, int client_fd) {
-    const char* response = 
-        "HTTP/1.1 200 OK\r\n"
-        "Content-Type: text/plain\r\n"
-        "Content-Length: 13\r\n"
-        "\r\n"
-        "Hello World!\n"; 
 
-    write(client_fd, response, strlen(response));
-    close(client_fd);
+void writeHandlerError(Writer* w, HandlerError* err) {
+    writeStatusLine(w, err->code);
+    Headers headers = getDefaultHeaders(err->message.length());
+    writeHeaders(w, headers);
+    writeBody(w, err->message);
+}
+
+void handleConnection(Server* s, int client_fd) {
+    int err = 0;
+    Request* req = RequestFromReader(client_fd, &err, 1024);
+    Writer w = {client_fd, EXPECT_STATUS};
+
+    if (err != 0 || req == nullptr) {
+        HandlerError parseErr = {BAD_REQUEST, "Invalid HTTP Request\n"};
+        writeHandlerError(&w, &parseErr);
+    } else {
+        HandlerError* handlerErr = s->handler(&w, req);
+
+        if (handlerErr != nullptr) {
+            writeHandlerError(&w, handlerErr);
+            delete handlerErr; 
+        }
+    }
+
+    if (req != nullptr) delete req;
+    close(client_fd); 
     sem_post(&s->connection_sem); 
 }
 
@@ -61,42 +77,45 @@ int createServerSocket(int port, int* err){
         close(server_fd);
         return -1;
     }
+    return server_fd;
 }
-Server* initServer(int server_fd, int* err) {
+Server* initServer(int server_fd, HandlerFunc handler, int* err) {
     Server* s = new Server();
     s->server_fd = server_fd;
     s->running = true;
     sem_init(&s->connection_sem, 0, MAX_CONNECTIONS);
+    s->handler = handler;
     s->listener_thread = thread(listenLoop, s);
     return s;
 }
 
-Server* serve(int port, int* err) {
+Server* serve(int port, HandlerFunc handler, int* err) {
     *err = 0;
     int server_fd = createServerSocket(port, err);
     if (server_fd == -1) {
         return nullptr;
     }
-    Server* s = initServer(server_fd, err);
+    Server* s = initServer(server_fd,handler, err);
     return s;
 }
-
 void closeServer(Server* s) {
     if (!s) return;
     
     s->running = false;
+    shutdown(s->server_fd, SHUT_RDWR);
     close(s->server_fd);
+    
     if (s->listener_thread.joinable()) {
         s->listener_thread.join();
     }
     
-    cout << "Waiting for active workers to finish..." << endl;
+   cout<<"Waiting for active workers to finish..." << endl;
 
     for (int i = 0; i < MAX_CONNECTIONS; i++) {
         sem_wait(&s->connection_sem);
     }
     sem_destroy(&s->connection_sem);
 
-    cout << "Worker Threads are destroyed. Server is shutting down." << endl;
+   cout<<"Worker Threads are destroyed. Server is shutting down." << endl;
     delete s;
 }

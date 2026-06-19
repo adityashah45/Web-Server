@@ -1,3 +1,0 @@
-Client-Server Model: You are the client (the browser) making the request,
-and the server is the computer hosting the website’s files.
-HTTP is a network protocol.

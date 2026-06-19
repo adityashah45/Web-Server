@@ -4,6 +4,7 @@
 #include <vector>
 #include <iostream>
 #include <string>
+#include <sys/socket.h> 
 #include <cstdio>
 #include "../headers/headers.hpp" 
 
@@ -41,6 +42,6 @@ int parseSingle(Request* req, const string& unparsed_buf, int* err);
 
 int parse(Request* req, const string& unparsed_buf, int* err);
 
-Request* RequestFromReader(FILE* reader, int* err, int chunks = 8);
+Request* RequestFromReader(int client_fd, int* err, int chunks = 8);
 
 #endif

@@ -8,24 +8,32 @@
 #include <unistd.h>
 #include <cstring>
 #include <iostream>
+#include "../response/response.hpp"
+#include "../request/request.hpp"
+#define MAX_CONNECTIONS 100
 
 using namespace std;
 
-#define MAX_CONNECTIONS 100 
+struct HandlerError {
+    StatusCode code;
+    string message;
+};
 
+typedef HandlerError* (*HandlerFunc)(Writer* w, Request* req);
 
 struct Server {
     int server_fd;                   
     bool running;                    
-    std::thread listener_thread;     
-    sem_t connection_sem;           
+    thread listener_thread;     
+    sem_t connection_sem;            
+    HandlerFunc handler;           
 };
 
-Server* serve(int port, int* err);
+
+Server* serve(int port, HandlerFunc handler, int* err);
 void closeServer(Server* s);
-int createServerSocket(int port, int* err);
-Server* initServer(int server_fd, int* err);
 void listenLoop(Server* s);
-void handleConnection(Server* s, int client_fd); 
+void handleConnection(Server* s, int client_fd);
+
 
 #endif
