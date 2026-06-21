@@ -9,7 +9,7 @@ SRCS = cmd/httpserver/main.cpp \
        internal/request/request.cpp \
        internal/request/requestline.cpp \
        internal/headers/headers.cpp \
-       internal/response/response.cpp # <-- Add this line!
+       internal/response/response.cpp 
 
 OBJS = $(SRCS:.cpp=.o)
 
